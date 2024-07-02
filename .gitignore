@@ -1,0 +1,8 @@
+data/wave_seq.npy
+data/rupture_data/
+*__pycache__*
+result*
+figures/res_*/
+*.log
+rupture/fig/
+rupture/*.npy
