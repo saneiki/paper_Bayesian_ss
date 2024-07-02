@@ -1,0 +1,26 @@
+cmn_param:  # Common parameters
+  GPU: true  # Whether to use GPU or not
+  cv: 1      # ID of cross validation set
+  dirs:  # Directory names
+    inp_dir: "data"          # Input directory
+    res_dir: "result/paper_ver2"  # Output directory
+  fils:  # File names
+    fwave  : "wave_seq.npy"   # Wave sequences
+    fgauge : "gauge_loc.csv"  # Gauge locations
+    fcase  : "case_ID.csv"    # Scenario names
+    ftrain : "Xtrain.npy"     # Training wave data
+    ftest  : "Xtest.npy"      # Test wave data
+    fttlist: "ttlist.csv"     # Training and test scenario names
+    fu     : "U.npy"  # POD mode matrix
+    fs     : "s.npy"  # Singular value vector
+  nums: 
+    ncv_set: 4     # Number of data divisions for cross validation
+    nsce   : 2342  # Number of all scenarios
+    ntim   : 2160  # Number of time steps
+    ngag   : 62    # Number of gauges
+fcst_param:  # Paramters for forecasting
+  ver  : "Fujita" # Version of forecastiong methods. "Nomura" or "Fujita"
+  ROM  : true   # Flag of whether reduced-order modeling via SVD
+  nmod : 23     # Number of modes for ROM
+  ltest: 'all'  # List of target test scenarios ("all" or [int])
+  obs_window: [30,60,120]  # List of interest observation windows
