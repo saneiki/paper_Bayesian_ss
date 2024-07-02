@@ -357,7 +357,7 @@ if __name__ == '__main__':
   cv = 1
 
   dirs = {  'inp_dir':'data',
-            'res_dir':'result/paper_Bayesian_scenario_superpose'
+            'res_dir':'result/paper_Bayes_scenario_superpose'
           }
   fils = {  'fwave'  :'wave_seq.npy',
             'fgauge' :'gauge_loc.csv',
