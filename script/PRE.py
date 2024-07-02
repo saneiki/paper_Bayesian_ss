@@ -32,7 +32,7 @@ class PreProcess():
     Make a figure showing contribution rates of singular values.
   FigReconError(GPU, cv, figs=(6,3), fonts=8)
     Make a figure showing reconstruction errors vs used POD modes.
-  JsonOut()
+  YamlOut()
     Output calculation conditions.
   """
 
@@ -46,7 +46,7 @@ class PreProcess():
 
     home = os.path.abspath(os.path.dirname(__file__))
     self.inp_dir = '%s/../%s' % (home, inp_dir)
-    self.res_dir = '%s/../%s' % (home, res_dir)
+    self.res_dir = '%s/../../%s' % (home, res_dir)
 
     self.res_cv_dir = '%s/CrsVld_{}' % self.res_dir
     self.fwave      = '%s/%s' % (self.inp_dir, fwave)
@@ -77,7 +77,7 @@ class PreProcess():
     donet2  = gauge[gauge['Instruments']=='DONET2']
     nowphas = gauge[gauge['Instruments']=='NOWPHAS']
 
-    try:
+    if 1:
       gid = list(gauge['ID'])
       dic_d1 = {  "x"    :donet1["Longitude"],
                   "y"    :donet1["Latitude"],
@@ -119,7 +119,7 @@ class PreProcess():
       plt.close()
       print('  - Make figure for gauge arrangement (PNG)')
 
-    except:
+    if 0:
       import simplekml
       f = '%s/gauges.kml' % self.res_dir
       kml = simplekml.Kml()
@@ -357,7 +357,7 @@ if __name__ == '__main__':
   cv = 1
 
   dirs = {  'inp_dir':'data',
-            'res_dir':'result/paper_ver2'
+            'res_dir':'result/paper_Bayesian_scenario_superpose'
           }
   fils = {  'fwave'  :'wave_seq.npy',
             'fgauge' :'gauge_loc.csv',
