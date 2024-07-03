@@ -5,14 +5,10 @@
 ```terminal
 .
 ├── README.md
-├── data              ：入力データを格納．ただし容量の問題からGitでは管理しない．`orca/home/share/fujita/`に圧縮ファイル（`data.tar.gz`）があるため，それを解凍して扱う．
-│   ├── rupture_data  ：断層データと疎の描画に必要なデータを格納．
+├── data              ：入力データを格納．ただし容量の問題からGitでは管理しない．
 │   ├── case_ID.csv   ：地震シナリオの番号を格納．
 │   ├── gauge_loc.csv ：観測点の位置情報を格納．
 │   └── wave_seq.npy  ：波高データを格納したバイナリファイル．形状は（シナリオ数，観測点数，時間ステップ数）．
-├── rupture           ：断層データ（Slip）に対して，加重平均による予測を適用するためのプログラム．
-│   ├── superpose.py  ：断層データ（Slip）に対する重ね合わせを実行．
-│   ├── ttsplit.py    ：断層データ（Slip）をtrainingとtestに分割．
 └── script            ：計算用のスクリプト（Python）．
     ├── COND.yaml     ：`MAIN.py`実行のための計算条件を設定．
     ├── FORECAST.py   ：津波予測用のスクリプト．旧手法（Nomura et al.: Sequential Bayesian update）と新手法の切り替えが可能．
@@ -42,7 +38,7 @@
 
 ### 準備
 
-本リポジトリのクローン後，orcaからdataディレクトリを取得・解凍する．
+<!-- 本リポジトリのクローン後，orcaからdataディレクトリを取得・解凍する． -->
 
 本データはGeoClawにより作成した2400の仮想南海トラフ地震・津波シナリオから一部シナリオを抜粋したものである．
 具体的には2342シナリオの，62観測点（下記参照）における波高データのみを使用している．
@@ -136,26 +132,3 @@ $
   |Taylor diagram|波形予測図（観測時間150s & 300s）|重みパラメータ分布|
   |:---:|:---:|:---:|
   |<img width="400" src="./README_images/taylor_Fujita.png">|<img width="400" src="./README_images/wave_Fujita_0120step.png">|<img width="400" src="./README_images/PDF_Fujita_0120step.png">
-
-### 断層データの重ね合わせ
-
-#### rupture/ttsplit.pyの実行
-
-`res_dir`と`cv`により，参照する津波予測結果が格納されたディレクトリを設定後，プログラムを実行する．
-実行後，`/rupture/`内に`slip_test.npy`と`slip_train.npy`が生成される．
-
-```terminal
-python3 rupture/ttsplit.py
-```
-
-#### rupture/superpose.pyの実行
-
-参照するディレクトリ，対象とするテストシナリオを設定後，プログラムを実行する．
-
-```terminal
-python3 rupture/superpose.py
-```
-
-`/rupture/fig/`内に以下のような図が出力される．
-
-<img width="700" src="./README_images/rupture_561_nagahama_91_00325.png">
