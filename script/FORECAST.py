@@ -29,15 +29,17 @@ class Forecasting():
     Load data.
   AddNoise(X, loc, scale)
     Add independent Gaussian noise with mean `loc` and std `scale` to the matrix X.
-  MakeTrain(cv, **kwargs)
+  MakeTrain(cv)
     Generate a matrix gathering POD coefficients of training wave data.
+  MakeROMX(cv)
+    Generate a reduced-order matrix of an original data matrix
   MakeTest(KALMAN, cv, Xobs, avec, Pmat, Qmat, Rmat, **kwargs)
     Generate a matrix gathering POD coefficients of test wave data, using least square estimaion or Kalman filter.
   InitResult()
     Initialize `self.result'
   InitWeight(cv)
     Initialize weight parameter set.
-  BayesianUpdate(GPU, cv, train_now, test_now, cov_kalman)
+  BayesianUpdate(GPU, cv, train_now, test_now, cov)
     Conducts Bayesian update/estimation for the weight parameters.
   Output(cv, itest, obs_window, cov_out, **kwargs)
     Output resultant weight parameter set.
@@ -49,8 +51,10 @@ class Forecasting():
     Calculate a range of prediction reliability for the previous method.
   PrdSigma_F(GPU, cv, cov, idx)
     Calculate a range of prediction reliability for the proposed method.
-  Run(GPU, cv, itest, obs_window)
-    Run a series of methods for forecasting on single test scenario `itest`.
+  Run_wave_based(GPU, cv, itest, obs_window, cov_out)
+    Run a tsunami prediction using observed wave data directly.
+  Run_state_based(GPU, cv, itest, obs_window, cov_out, KALMAN)
+    Run a tsunami prediction using state variables instead of observed waves.
   """
 
   def __init__( self, ver, ROM, nmod,
@@ -222,7 +226,8 @@ class Forecasting():
 
     Return
     -------
-    train: Training coefficient matrix with the shape as (Number of training scenarios, Number of used modes, Number of time steps).
+    train: numpy.ndarray
+      Training coefficient matrix with the shape as (Number of training scenarios, Number of used modes, Number of time steps).
     """
 
     Xtrain = self.Loaddata(**dict(obj='Xtrain', cv=cv))
@@ -237,6 +242,18 @@ class Forecasting():
   
   
   def MakeROMX(self, cv):
+    """Generate a reduced-order matrix of an original data matrix
+
+    Parameters
+    -----------
+    cv: int
+      ID of a cross validation set to be used
+
+    Return
+    -------
+    train: numpy.ndarray
+      a reduced-order matrix of an original data matrix
+    """
     Xtrain = self.Loaddata(**dict(obj='Xtrain', cv=cv))
     Phi    = self.Loaddata(**dict(obj='Phi', cv=cv))
     ntrn = self.ntrn_cv_set[cv]
@@ -247,7 +264,6 @@ class Forecasting():
       rom_mat = Phi[:,:self.nmod] @ a_mat[:self.nmod,:]
       train[i,:,:] = rom_mat
     return train
-
 
 
   def MakeTest(self, KALMAN, cv, xobs, avec, Pmat, Qmat, Rmat, **kwargs):
@@ -319,7 +335,7 @@ class Forecasting():
       self.weights = [mean_w, cov_w]
 
 
-  def BayesianUpdate(self, GPU, cv, train_now, test_now, cov_kalman):
+  def BayesianUpdate(self, GPU, cv, train_now, test_now, cov):
     """Conducts Bayesian update/estimation for the weight parameters.
 
     Parameters
@@ -332,13 +348,15 @@ class Forecasting():
       Vector of training data at a time step, with shape as (Number of scenarios, Number of modes)
     test_now: numpy.ndarray
       Vector of test data at a time step, with shape as (Number of modes)
+    cov: numpy.ndarray
+      Covariance matrix
     """
 
     ntrn = self.ntrn_cv_set[cv]
     if self.ver == 'Nomura':
       wei, _ = self.weights
       norm = multivariate_normal( mean=test_now, 
-                                  cov=cov_kalman
+                                  cov=cov
                                 )
       for isce in range(ntrn):
         wei[isce] *= norm.pdf( train_now[isce,:] )
@@ -355,17 +373,17 @@ class Forecasting():
         train_now = cp.array(train_now)
         mean_w = cp.array(mean_w)
         cov_w = cp.array(cov_w)
-        cov_kalman = cp.array(cov_kalman)
+        cov = cp.array(cov)
         test_now = cp.array(test_now)
 
-        G = cov_w @ train_now.T @ cp.linalg.inv(train_now @ cov_w @ train_now.T + cov_kalman)
+        G = cov_w @ train_now.T @ cp.linalg.inv(train_now @ cov_w @ train_now.T + cov)
         mean_post = mean_w + G @ (test_now - train_now @ mean_w)
         cov_post = (cp.eye(G.shape[0]) - G @ train_now) @ cov_w
 
         self.weights = [mean_post.get(), cov_post.get()]
 
       else:
-        G = cov_w @ train_now.T @ np.linalg.inv(train_now @ cov_w @ train_now.T + cov_kalman)
+        G = cov_w @ train_now.T @ np.linalg.inv(train_now @ cov_w @ train_now.T + cov)
         mean_post = mean_w + G @ (test_now - train_now @ mean_w)
         cov_post = (np.eye(G.shape[0]) - G @ train_now) @ cov_w
 
@@ -762,9 +780,9 @@ class Forecasting():
       plt.clf()
       plt.close()
 
-  
-  def Run(self, GPU, cv, itest, obs_window, cov_out, KALMAN=True):
-    """Run a series of method for forecasting on single test scenario `itest`.
+
+  def Run_wave_based(self, GPU, cv, itest, obs_window, cov_out):
+    """Run a tsunami prediction using observed wave data directly.
 
     Parameters
     -----------
@@ -776,62 +794,100 @@ class Forecasting():
       ID of a targeting test scenario
     obs_window: list(int)
       List of observation widows to output the waveform figure
+    cov_out: bool
+      Flag for outputing covariance of the prediction.
     """
-    sv = self.Loaddata(**dict(obj='sv', cv=cv))
-    print(sv)
-    print(sv[0]/sv[-1])
-    print(sv[0]/sv[22])
-    import sys; sys.exit()
 
     start = self.InfoInit(cv=cv, itest=itest)
-    # if self.ROM:
-      # train = self.MakeTrain(cv=cv)
-    # else:
-      # train = self.Loaddata(**dict(obj='Xtrain', cv=cv))
     train = self.MakeROMX(cv)
+    self.InitResult()
+    
+    Xtest = self.Loaddata(**dict(obj='Xtest', cv=cv, itest=itest))
+    Xtest = self.AddNoise(X=Xtest, loc=0., scale=0.)
+    self.InitWeight(cv)
+    
+    for itime in range(self.ntim):
+      alp_train_now = train[:,:,itime]
+      self.BayesianUpdate(  GPU=GPU, 
+                            train_now=alp_train_now, 
+                            test_now=Xtest[:,itime], 
+                            cv=cv,
+                            cov=np.eye(62)
+                          )
+      
+      if itime%60==0:
+        self.InfoProc(itime=itime, itest=itest, cv=cv)
+      if itime in obs_window:
+        self.result.append(copy.deepcopy(self.weights))
+        if itime == obs_window[-1]:
+          self.Output(itest=itest, obs_window=obs_window, cov_out=cov_out, cv=cv)
+          break
+        continue
+    del train, Xtest, alp_train_now, self.weights
+    print('Calculation ending at {}'.format(datetime.datetime.now()))
+  
+  
+  def Run_state_based(self, GPU, cv, itest, obs_window, cov_out, KALMAN=True):
+    """Run a tsunami prediction using state variables instead of observed waves.
+    Therefore, an inverse estimation process is needed to obtain the state variables from the wave data.
+
+    Parameters
+    -----------
+    GPU: bool
+      Flag to determine whether the calculation is with or without GPU
+    cv: int
+      ID of a cross validation set to be used
+    itest: int
+      ID of a targeting test scenario
+    obs_window: list(int)
+      List of observation widows to output the waveform figure
+    cov_out: bool
+      Flag for outputing covariance of the prediction.
+    KALMAN: bool
+      Flag for executing a Kalman filter for an inverse estimation
+    """
+
+    start = self.InfoInit(cv=cv, itest=itest)
+    if self.ROM:
+      train = self.MakeTrain(cv=cv)
+    else:
+      train = self.Loaddata(**dict(obj='Xtrain', cv=cv))
     self.InitResult()
 
     Xtest = self.Loaddata(**dict(obj='Xtest', cv=cv, itest=itest))
     Xtest = self.AddNoise(X=Xtest, loc=0., scale=0.)
     self.InitWeight(cv)
 
-    # sv = self.Loaddata(**dict(obj='sv', cv=cv))
-    # cov_est = np.diag(np.sqrt(sv[:self.nmod]))
-    # del sv
-    # if self.ROM:
-    #   cov_obs_noise = np.eye(self.ngag)
-    #   cov_sys_noise = np.eye(self.nmod) 
-    #   Phi = self.Loaddata(**dict(obj='Phi', cv=cv))
-    #   alp_test_now = np.linalg.pinv(Phi[:, :self.nmod]) @ Xtest[:,0]
+    sv = self.Loaddata(**dict(obj='sv', cv=cv))
+    cov_est = np.diag(np.sqrt(sv[:self.nmod]))
+    del sv
+    if self.ROM:
+      cov_obs_noise = np.eye(self.ngag)
+      cov_sys_noise = np.eye(self.nmod) 
+      Phi = self.Loaddata(**dict(obj='Phi', cv=cv))
+      alp_test_now = np.linalg.pinv(Phi[:, :self.nmod]) @ Xtest[:,0]
 
     for itime in range(self.ntim):
       alp_train_now = train[:,:,itime]
-      # if self.ROM:
-        # alp_test_now, cov_est \
-          # = self.MakeTest(  KALMAN=KALMAN,
-                            # xobs=Xtest[:,itime], 
-                            # avec=alp_test_now, 
-                            # Pmat=cov_est, 
-                            # Qmat=cov_sys_noise, 
-                            # Rmat=cov_obs_noise,
-                            # cv=cv,
-                            # Phi=Phi
-                          # )
-      # else:
-        # alp_test_now = Xtest[:,itime]
-
-      # self.BayesianUpdate(  GPU=GPU, 
-                            # train_now=alp_train_now, 
-                            # test_now=alp_test_now, 
-                            # cv=cv,
-                            # cov_kalman=cov_est
-                          # )
+      if self.ROM:
+        alp_test_now, cov_est \
+          = self.MakeTest(  KALMAN=KALMAN,
+                            xobs=Xtest[:,itime], 
+                            avec=alp_test_now, 
+                            Pmat=cov_est, 
+                            Qmat=cov_sys_noise, 
+                            Rmat=cov_obs_noise,
+                            cv=cv,
+                            Phi=Phi
+                          )
+      else:
+        alp_test_now = Xtest[:,itime]
 
       self.BayesianUpdate(  GPU=GPU, 
                             train_now=alp_train_now, 
-                            test_now=Xtest[:,itime], 
+                            test_now=alp_test_now, 
                             cv=cv,
-                            cov_kalman=np.eye(62)
+                            cov=cov_est
                           )
 
       if itime%60==0:
@@ -842,37 +898,36 @@ class Forecasting():
           self.Output(itest=itest, obs_window=obs_window, cov_out=cov_out, cv=cv)
           break
         continue
-    # del train, Xtest, alp_train_now, alp_test_now, self.weights, cov_est
-    del train, Xtest, alp_train_now, self.weights
+    del train, Xtest, alp_train_now, alp_test_now, self.weights, cov_est
     print('Calculation ending at {}'.format(datetime.datetime.now()))
 
 
 if __name__ == '__main__':
-  res_dir = 'result/paper_ver2'
+  res_dir = 'result/paper_Bayes_scenario_superpose'
   GPU = True
-  obs_window = [30,60,120]
+  obs_window = [30,120]
   cv = 1
-  itest = 42
+  itest = 561
   nmod = 23
 
     
   home = os.path.abspath(os.path.dirname(__file__))
-  finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+  finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 
   with open(finfo, 'r') as f:
     info = yaml.safe_load(f)
 
   F = Forecasting(ver='Fujita', ROM=True, nmod=nmod, **info)
-  F.Run(GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, cov_out=True)
+  F.Run_wave_based(GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, cov_out=True)
   F.WaveformFigure( GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, 
                       gIDlist=[9301,9303,9304,9305,9311])
   F.TaylorFigure( itest=itest, obs_window=obs_window, 
                     gIDlist=[9301,9303,9304,9305,9311], cv=cv)
   F.WeightsPDFFigure( cv=cv, itest=itest, obs_window=obs_window)
 
-  # N = Forecasting(ver='Nomura', ROM=True, nmod=nmod, **info)
-  # N.Run(GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, cov_out=False)
-  # N.WaveformFigure( GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, 
-  #                     gIDlist=[9311,9301,9303,9304,9305])
-  # N.TaylorFigure( itest=itest, obs_window=obs_window, 
-  #                   gIDlist=[9311,9301,9303,9304,9305], cv=cv)
+  N = Forecasting(ver='Nomura', ROM=True, nmod=nmod, **info)
+  N.Run_state_based(GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, cov_out=False)
+  N.WaveformFigure( GPU=GPU, cv=cv, itest=itest, obs_window=obs_window, 
+                      gIDlist=[9311,9301,9303,9304,9305])
+  N.TaylorFigure( itest=itest, obs_window=obs_window, 
+                    gIDlist=[9311,9301,9303,9304,9305], cv=cv)
