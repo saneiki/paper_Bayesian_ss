@@ -3,7 +3,7 @@ cmn_param:  # Common parameters
   cv: 1      # ID of cross validation set
   dirs:  # Directory names
     inp_dir: "data"          # Input directory
-    res_dir: "result/paper_ver2"  # Output directory
+    res_dir: "result/paper_Bayes_scenario_superpose"  # Output directory
   fils:  # File names
     fwave  : "wave_seq.npy"   # Wave sequences
     fgauge : "gauge_loc.csv"  # Gauge locations
@@ -23,4 +23,4 @@ fcst_param:  # Paramters for forecasting
   ROM  : true   # Flag of whether reduced-order modeling via SVD
   nmod : 23     # Number of modes for ROM
   ltest: 'all'  # List of target test scenarios ("all" or [int])
-  obs_window: [30,60,120]  # List of interest observation windows
+  obs_window: [30,120]  # List of interest observation windows

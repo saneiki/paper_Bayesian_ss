@@ -7,9 +7,8 @@ import datetime
 import PRE
 import FORECAST
 
-preproc  = False  # Flag of preprocess execution
+preproc  = True  # Flag of preprocess execution
 forecast = True  # Flag of forecasting execution
-forecast_forall = False  # Flag for execution of forecasting with paper conditions
 home = os.path.abspath(os.path.dirname(__file__))
 
 fcond = os.path.join(home, 'COND.yaml')
@@ -39,7 +38,7 @@ else:
 # =====================================
 
 res_dir = cond["cmn_param"]["dirs"]["res_dir"]
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 with open(finfo, 'r') as f:
   info = yaml.safe_load(f)
 
@@ -57,22 +56,18 @@ if forecast:
                               nmod=fcst["nmod"], 
                               **info)
   for itest in ltest:
-    prd.Run(  GPU=cmn["GPU"], 
-              cv=cmn["cv"], 
-              itest=itest, 
-              obs_window=fcst["obs_window"], 
-              cov_out=True)
-    # prd.WaveformFigure( GPU=cmn["GPU"], 
-                        # cv=cmn["cv"], 
-                        # itest=itest, 
-                        # obs_window=fcst["obs_window"], 
-                        # gIDlist=[9301,9303,9304,9305,9311])
-    # prd.TaylorFigure( cv=cmn["cv"],
-                      # itest=itest, 
-                      # obs_window=fcst["obs_window"], 
-                      # gIDlist=[9301,9303,9304,9305,9311])
-    # if prd.ver=='Fujita':
-      # prd.WeightsPDFFigure( cv=cmn["cv"], itest=itest, obs_window=fcst["obs_window"])
+    if fcst["ver"]=='Fujita':
+      prd.Run_wave_based( GPU=cmn["GPU"], 
+                          cv=cmn["cv"], 
+                          itest=itest, 
+                          obs_window=fcst["obs_window"], 
+                          cov_out=True)
+    elif fcst["ver"]=='Nomura':
+      prd.Run_state_based(GPU=cmn["GPU"], 
+                          cv=cmn["cv"], 
+                          itest=itest, 
+                          obs_window=fcst["obs_window"], 
+                          cov_out=False)
 else:
   print('###  Skip forecasting  ###','\n')
 # =====================================
