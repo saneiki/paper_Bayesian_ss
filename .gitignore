@@ -3,6 +3,7 @@ data/rupture_data/
 *__pycache__*
 result*
 figures/res_*/
+figures/sub_*
 *.log
 rupture/fig/
 rupture/*.npy
