@@ -820,7 +820,7 @@ def FaultGeo(home, mw, rnum):
   fault_geometry[:,[3,6,9,12]] = 1e3*abs(fault_geometry[:,[3,6,9,12]])
   print('Loaded geometry for %i triangular subfaults' % fault_geometry.shape[0])
 
-  rupt_fname = os.path.join(home, 'ruptures', ruptures)
+  rupt_fname = os.path.join(home, ruptures)
   rupture_parameters = np.loadtxt(rupt_fname,skiprows=1)
   
   fault0 = dtopotools.Fault()
@@ -1076,7 +1076,7 @@ def MakeAxesRupture(figs=(7.,3.), fonts=7):
 
 def SlipDist(ax, mw, rnum):
   cmap = mpl.cm.jet
-  home = '%s/../data/rupture_data' % os.path.abspath(os.path.dirname(__file__))
+  home = '%s/../data' % os.path.abspath(os.path.dirname(__file__))
   coast = np.loadtxt(os.path.join(home, 'japan_coast.txt'))
   fault0 = FaultGeo(home=home, mw=mw, rnum=rnum)
 
@@ -1118,7 +1118,7 @@ def SlipDist(ax, mw, rnum):
 
 def DeformDist(ax, mw, rnum):
   cmap = mpl.cm.bwr
-  home = '%s/../data/rupture_data' % os.path.abspath(os.path.dirname(__file__))
+  home = '%s/../data' % os.path.abspath(os.path.dirname(__file__))
   coast = np.loadtxt(os.path.join(home, 'japan_coast.txt'))
   fault0 = FaultGeo(home=home, mw=mw, rnum=rnum)
   
@@ -1177,7 +1177,7 @@ def FaultGeo(home, mw, rnum):
   fault_geometry[:,[3,6,9,12]] = 1e3*abs(fault_geometry[:,[3,6,9,12]])
   print('Loaded geometry for %i triangular subfaults' % fault_geometry.shape[0])
 
-  rupt_fname = os.path.join(home, 'ruptures', ruptures)
+  rupt_fname = os.path.join(home, ruptures)
   rupture_parameters = np.loadtxt(rupt_fname,skiprows=1)
   
   fault0 = dtopotools.Fault()

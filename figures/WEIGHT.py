@@ -6,8 +6,8 @@ import yaml
 import SUB as SUB
 import pandas as pd
 
-res_dir = 'result/paper_ver2'
-fig_dir = 'res_paper_ver2'
+res_dir = 'result/paper_Bayes_scenario_superpose'
+fig_dir = 'figures/paper_Bayes_scenario_superpose'
 ft = 'pdf'
 
 cv = 1
@@ -20,15 +20,15 @@ itest = 561
 GPU = True
 
 home = os.path.abspath(os.path.dirname(__file__))
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 with open(finfo, 'r') as f:
   info = yaml.safe_load(f)
-out = os.path.join(home, fig_dir, 'weight')
+out = '%s/../../%s/weight' % (home, fig_dir)
 
 ttlst = pd.read_csv(info["fttlst"].format(cv))
 tcase = ttlst.loc[ttlst['label']=='test', 'ID']
 
-f = '%s/%s_%s.%s' % (out, itest, tcase.iloc[itest], ft)
+fil = '%s_%s.%s' % (itest, tcase.iloc[itest], ft)
 sid = list(tcase.index)[itest] + 1
 
 fig, axs = SUB.MakeAxesWeight(figs=(3.5,3.5))
@@ -46,4 +46,4 @@ SUB.WeiPost(axs=[axs[0,6],0,axs[1,6],axs[1,7]], out=out,
               **info)
 
 SUB.SettingWeights(axs=axs, alp=alp, sid=sid, obs=[30,60,120])
-SUB.fsave(out, f)
+SUB.fsave(out, fil)

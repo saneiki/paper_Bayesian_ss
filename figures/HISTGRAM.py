@@ -6,8 +6,8 @@ import yaml
 import SUB as SUB
 import pandas as pd
 
-res_dir = 'result/paper_ver2'
-fig_dir = 'res_paper_ver2'
+res_dir = 'result/paper_Bayes_scenario_superpose'
+fig_dir = 'figures/paper_Bayes_scenario_superpose'
 ft = 'pdf'
 
 cv = 1
@@ -18,11 +18,10 @@ itestt = [42,561]
 obs = 120
 # 
 home = os.path.abspath(os.path.dirname(__file__))
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 with open(finfo, 'r') as f:
   info = yaml.safe_load(f)
-outh = os.path.join(home, fig_dir, 'histgram')
-outb = os.path.join(home, fig_dir, 'bar')
+out = '%s/../../%s/hist' % (home, fig_dir)
 
 ttlst = pd.read_csv(info["fttlst"].format(cv))
 tcase = ttlst.loc[ttlst['label']=='test', 'ID']
@@ -45,5 +44,5 @@ SUB.WeightBox(ax=axs[3],
 
 SUB.SettingHistgram(axs=axs, alp=['a','b'], 
                     sid=[list(tcase.index)[42]+1, list(tcase.index)[561]+1])
-SUB.fsave(outh, 'hist.{}'.format(ft))
+SUB.fsave(out, 'hist.{}'.format(ft))
 

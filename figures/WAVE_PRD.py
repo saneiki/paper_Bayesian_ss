@@ -1,13 +1,11 @@
 import os
-os.environ['OPENBLAS_NUM_THREADS'] = '1' 
-import numpy as np
   
 import yaml
 import SUB as SUB
 import pandas as pd
 
-res_dir = 'result/paper_ver2'
-fig_dir = 'res_paper_ver2'
+res_dir = 'result/paper_Bayes_scenario_superpose'
+fig_dir = 'figures/paper_Bayes_scenario_superpose'
 ft = 'pdf'
 
 cv = 1
@@ -15,20 +13,20 @@ ROM = True
 nmod = 23
 
 w = 'Cols' # 'Cols' or 'Rows'
-alp = ' '
+alp = 'b'
 itest = 561
 
 GPU = True
 
 home = os.path.abspath(os.path.dirname(__file__))
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 with open(finfo, 'r') as f:
   info = yaml.safe_load(f)
-out = os.path.join(home, fig_dir, 'waveform')
+out = '%s/../../%s/waveform' % (home, fig_dir)
 
 ttlst = pd.read_csv(info["fttlst"].format(cv))
 tcase = ttlst.loc[ttlst['label']=='test', 'ID']
-fil = '%s/prd_%s_%s.%s' % (out, itest, tcase.iloc[itest], ft)
+fil = 'prd_%s_%s.%s' % (itest, tcase.iloc[itest], ft)
 sid = list(tcase.index)[itest] + 1
 
 if w=='Cols':
@@ -46,13 +44,6 @@ SUB.WaveFujita( ax=axs[0], cv=cv, ROM=ROM, nmod=nmod, itest=itest, obs=30,
                 gID=9303, GPU=GPU, **info)
 SUB.WaveFujita( ax=axs[1], cv=cv, ROM=ROM, nmod=nmod, itest=itest, obs=120, 
                 gID=9303, GPU=GPU, **info)
-
-
-res_dir = 'result/paper'
-home = os.path.abspath(os.path.dirname(__file__))
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
-with open(finfo, 'r') as f:
-  info = yaml.safe_load(f)
 
 SUB.WaveNomura( ax=axs[0], cv=cv, ROM=ROM, nmod=nmod, itest=itest, obs=30, 
                 gID=9303, GPU=GPU, **info)

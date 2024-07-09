@@ -6,8 +6,8 @@ import yaml
 import SUB as SUB
 import pandas as pd
 
-res_dir = 'result/paper'
-fig_dir = 'paper'
+res_dir = 'result/paper_Bayes_scenario_superpose'
+fig_dir = 'figures/paper_Bayes_scenario_superpose'
 ft = 'pdf'
 
 itest = 561
@@ -15,15 +15,15 @@ itest = 561
 cv = 1
 
 home = os.path.abspath(os.path.dirname(__file__))
-finfo = '%s/../%s/INFO.yaml' % (home, res_dir)
+finfo = '%s/../../%s/INFO.yaml' % (home, res_dir)
 with open(finfo, 'r') as f:
   info = yaml.safe_load(f)
-out = os.path.join(home, fig_dir, 'rupture')
+out = '%s/../../%s/rupture' % (home, fig_dir)
 
 ttlst = pd.read_csv(info["fttlst"].format(cv))
 tcase = ttlst.loc[ttlst['label']=='test', 'ID']
 
-f = '%s/rupture_%s_%s.%s' % (out, itest, tcase.iloc[itest], ft)
+f = 'rupture_%s_%s.%s' % (itest, tcase.iloc[itest], ft)
 sid = list(tcase.index)[itest] + 1
 
 fig, axs = SUB.MakeAxesRupture()
