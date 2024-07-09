@@ -1,23 +1,24 @@
 # Bayesian tsunami forecasting
 
-## 格納ファイルの説明
+## Description of files
 
 ```terminal
 .
 ├── README.md
-├── data              ：入力データを格納．ただし容量の問題からGitでは管理しない．
-│   ├── case_ID.csv   ：地震シナリオの番号を格納．
-│   ├── gauge_loc.csv ：観測点の位置情報を格納．
-│   └── wave_seq.npy  ：波高データを格納したバイナリファイル．形状は（シナリオ数，観測点数，時間ステップ数）．
-└── script            ：計算用のスクリプト（Python）．
-    ├── COND.yaml     ：`MAIN.py`実行のための計算条件を設定．
-    ├── FORECAST.py   ：津波予測用のスクリプト．旧手法（Nomura et al.: Sequential Bayesian update）と新手法の切り替えが可能．
-    ├── MAIN.py       ：`PRE.py`と`FORECAST.py`を実行するためのスクリプト．
-    ├── PRE.py        ：前処理（データ読み込み・分割，POD）のためのスクリプト．
-    └── subfigure.py  ：地形図（cartopy）を描画するための副プログラム．
+├── data              :Input data
+│   ├── case_ID.csv   :Scenario ID
+│   ├── gauge_loc.csv :Locations of synthetic gauges
+│   └── wave_seq.npy  :Data of wave sequences. Need to get from Zenodo (https://doi.org/10.5281/zenodo.12696848)
+├── figures: Python scripts for generating figures
+└── script            :Python scripts for a series of calculations
+    ├── COND.yaml     :Calculation conditions
+    ├── FORECAST.py   :Script for a tsunami prediction
+    ├── MAIN.py       :Script for executing PRE.py and FORECAST.py 
+    ├── PRE.py        :Script for a offline phase
+    └── subfigure.py  :Subprogram
 ```
 
-使用したパッケージとバージョン．
+### Packeges
 |Libraries|Versions|
 |:---|:---:|
 |python|3.8.10|
@@ -30,60 +31,55 @@
 |scipy|1.8.1|
 |cartopy|0.18.0|
 
-## 使用方法
+## Instructions
 
-~~計算の実行等は`README.md`が置かれている階層で行うことが前提．~~
-~~例えば，`./script/`下での計算実行はエラーとなるので注意．~~
-~~以下の説明においても，カレントディレクトリは本リポジトリをクローンした際に生成される`bayesian_tsunami_forecasting/`下とする．~~
+### Data preparation
 
-### 準備
-
-<!-- 本リポジトリのクローン後，orcaからdataディレクトリを取得・解凍する． -->
-
-本データはGeoClawにより作成した2400の仮想南海トラフ地震・津波シナリオから一部シナリオを抜粋したものである．
-具体的には2342シナリオの，62観測点（下記参照）における波高データのみを使用している．
-シナリオに関しては，シミュレーションが正しく実施されていないと思われる58件を除いた結果であり，観測点については実観測点と同位置のものを採用している．観測点配置は以下であり，[NOWPHAS](https://www.mlit.go.jp/kowan/nowphas/ "リアルタイムナウファス（国土交通省港湾局，全国港湾海洋波浪情報網）")（赤丸），[DONET1](https://www.seafloor.bosai.go.jp/DONET/ "地震・津波観測監視システム：DONET")（青丸），[DONET2](https://www.seafloor.bosai.go.jp/DONET/ "地震・津波観測監視システム：DONET")（緑丸）を参照にした配置となっている．
+Obtain a file named wave_seq.npy from [Zenodo](https://doi.org/10.5281/zenodo.12696848) and place it in the data folder.
+The data file stores a 3d array shaped (2342x62x2160), corresponding to the numbers of hypothetical scenarios, synthetic gauges and time steps.
+The synthetic gauge configuration refer to the locations of existing observational networks; [NOWPHAS](https://www.mlit.go.jp/kowan/nowphas/ "リアルタイムナウファス（国土交通省港湾局，全国港湾海洋波浪情報網）") (red)，[DONET1](https://www.seafloor.bosai.go.jp/DONET/ "地震・津波観測監視システム：DONET") (blue), and [DONET2](https://www.seafloor.bosai.go.jp/DONET/ "地震・津波観測監視システム：DONET") (green), as shown below.
 
 <img width="700" src="./README_images/gauges.png">
 
-### MAIN.pyの実行
+### Tsunami prediction
 
-`script/COND.yaml`で計算条件を設定し，`script/MAIN.py`を実行することにより`script/PRE.py`と`script/FORECAST.py`が実行される．それぞれのプログラムを個別に実行することも可能である．
+**1. `script/COND.yaml`: Condition settings**
 
-#### `script/COND.yaml`: 計算条件の設定
+- `GPU`: *bool*
 
-- `GPU`: *bool*　GPUを使用するかどうかの設定．基本的にはGPUを使用したほうが計算が早い（はず）．参考までにDLBOX君では，予測計算にかかる時間が数分⇒数秒くらいの差はある．
-- `cv`: *int*　使用するクロスバリデーションセットのID．デフォルトでは全データが4分割され，そのうちの1つをテストシナリオとするため，`cv`は0～３で設定する．分割数は`ncv_set`により決定される．
-- `inp_dir`: *str*　入力ファイルを格納するディレクトリ名．
-- `res_dir`: *str*　出力ファイルを格納するディレクトリ名．
-- `fwave`: *str*　波高時系列データを格納するファイル名．`inp_dir`内に同名のファイルが必要．
-- `fgauge`: *str*　観測点位置データを格納するファイル名．`inp_dir`内に同名のファイルが必要．
-- `fcase`: *str*　シナリオ名を格納するファイル名．`inp_dir`内に同名のファイルが必要．
-- `ftrain`: *str*　学習データを格納するファイル名．`res_dir`内に同名のファイルが出力される．
-- `ftest`: *str*　学習データを格納するファイル名．`res_dir`内に同名のファイルが出力される．
-- `fttlist`: *str*　学習データとテストシナリオの分類結果を格納するファイル名．`res_dir`内に同名のファイルが出力される．
-- `fu`: *str*　空間モード行列を格納するファイル名．`res_dir`内に同名のファイルが出力される．
-- `fs`: *str*　特異値を格納するファイル名．`res_dir`内に同名のファイルが出力される．
-- `ncv_set`: *int*　クロスバリデーションのためのデータ分割数．
-- `nsce`, `ntim`, and `ngag`: *int*　シナリオ数，時間ステップ数，観測点数
-- `ver`: *str*　予測手法の選択．
-- `ROM`: *bool　予測計算時に特異値分解による次元削減を行うかどうかを決定．`false`の場合はPOD係数を介さずに波高データを直接比較することで予測を行う．
-- `nmod`: *int*　ROM時の使用モード数．
-- `ltest`: *[int]*　予測計算の対象テストシナリオID．
-- `obs_window`: *[int]*　予測結果を出力する観測時間ステップ．
+  If you want to use GPU, you can set as `GPU: true`.
 
-#### 計算の実行
-MAIN.py内で以下の条件設定を行い，プログラムを実行する．
+- `ver`: *str*
 
-- `preproc`: *bool*　前処理を実行するかどうか．
-- `forecast`: *bool*　予測計算を実行するかどうか．
+  Version of the tsunami prediction method. You can choose 'Fujita' and 'Nomura' to run a scenario superposition and the best-fit scenario detection, respectively.
+
+  - `ROM`: *bool*
+
+  If you do not want to conduct ROM, you can set as `ROM: false`.
+  
+- `nmod`: *int*
+
+  The number of modes to realize ROM
+
+- `ltest`: *[int] or 'all'*
+
+  List of test scenario IDs. If you target specific test scenarios, you can replace 'all' with a list of IDs.
+
+- `obs_window`: *[int]*
+
+  List of time steps to output the prediction results.
+
+**2. Run Main.py**
+
+Run tsunami prediction by
 
 ```terminal
 python3 script/MAIN.py
 ```
 
-#### 実行結果
-MAIN.pyを実行後，PRE.pyとFORECAST.pyが実行され以下のようなログが流れる．
+### Results
+
+The following log flows after executing the script.
 
 ```terminal
 $ python3 script/MAIN.py 
@@ -127,7 +123,7 @@ Make a figure of PDF for No.561
 $ 
 ```
 
-また，初期設定では以下のような予測計算結果の図が`/result/`内に描画される．
+The following figures showing prediction results are save in `/result/`.
 
   |Taylor diagram|波形予測図（観測時間150s & 300s）|重みパラメータ分布|
   |:---:|:---:|:---:|
